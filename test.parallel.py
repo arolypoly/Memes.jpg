@@ -5,8 +5,8 @@ from time import sleep
 # GPIO Ports
 Encoders = [(7, 8), (11, 12), (15, 16), (17, 18), (21, 22), (23, 24)]
 
-class Encoder:
 
+class Encoder:
     Rotary_counter = 0
     Current_A = 1
     Current_B = 1
@@ -44,6 +44,10 @@ class Encoder:
         GPIO.add_event_detect(Enc_A, GPIO.RISING, callback=self.rotary_interrupt)  # NO bouncetime
         GPIO.add_event_detect(Enc_B, GPIO.RISING, callback=self.rotary_interrupt)  # NO bouncetime
 
+        thread = threading.Thread(target=self.start(), args=())
+        thread.daemon = False
+        thread.start()
+
     @staticmethod
     def start():
         global Rotary_counter, LockRotary
@@ -52,7 +56,7 @@ class Encoder:
         New_Position = 0
 
         while True:
-            sleep(1/125)
+            sleep(1 / 125)
 
             LockRotary.acquire()
             New_Position = Rotary_counter
@@ -62,3 +66,6 @@ class Encoder:
             if (New_Position != 0):
                 Position = Position + New_Position * abs(New_Position)
                 print(New_Position, Position)
+
+
+Encoder1 = Encoder(14, 15)
