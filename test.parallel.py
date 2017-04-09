@@ -6,13 +6,14 @@ from time import sleep
 Encoders = [(7, 8), (11, 12), (15, 16), (17, 18), (21, 22), (23, 24)]
 
 
-class Encoder:
+class Encoder(object):
     Rotary_counter = 0
     Current_A = 1
     Current_B = 1
 
     LockRotary = threading.Lock()
 
+    @staticmethod
     def rotary_interrupt(A_or_B, Enc_A, Enc_B):
         global Rotary_counter, Current_A, Current_B, LockRotary
 
@@ -25,7 +26,7 @@ class Encoder:
         Current_A = Switch_A
         Current_B = Switch_B
 
-        if (Switch_A and Switch_B):
+        if Switch_A and Switch_B:
             LockRotary.acquire()
             if A_or_B == Enc_B:
                 Rotary_counter += 1
@@ -53,7 +54,6 @@ class Encoder:
         global Rotary_counter, LockRotary
 
         Position = 0
-        New_Position = 0
 
         while True:
             sleep(1 / 125)
@@ -63,7 +63,7 @@ class Encoder:
             Rotary_counter = 0
             LockRotary.release()
 
-            if (New_Position != 0):
+            if New_Position != 0:
                 Position = Position + New_Position * abs(New_Position)
                 print(New_Position, Position)
 
