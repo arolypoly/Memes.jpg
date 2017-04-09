@@ -68,4 +68,5 @@ class Encoder:
                 print(New_Position, Position)
 
 
-Encoder1 = Encoder(14, 15)
+GPIO.cleanup()
+Encoder1 = Encoder(7, 8)
