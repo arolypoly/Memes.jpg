@@ -13,36 +13,37 @@ class Encoder:
 
     LockRotary = threading.Lock()
 
-    def rotary_interrupt(A_or_B, Enc_A, Enc_B):
+    @staticmethod
+    def rotary_interrupt(ab, enc_a, enc_b):
         global Rotary_counter, Current_A, Current_B, LockRotary
 
-        Switch_A = GPIO.input(Enc_A)
-        Switch_B = GPIO.input(Enc_B)
+        switch_a = GPIO.input(enc_a)
+        switch_b = GPIO.input(enc_b)
 
-        if Current_A == Switch_A and Current_B == Switch_B:
+        if Current_A == switch_a and Current_B == switch_b:
             return
 
-        Current_A = Switch_A
-        Current_B = Switch_B
+        Current_A = switch_a
+        Current_B = switch_b
 
-        if (Switch_A and Switch_B):
+        if switch_a and switch_b:
             LockRotary.acquire()
-            if A_or_B == Enc_B:
+            if ab == enc_b:
                 Rotary_counter += 1
             else:
                 Rotary_counter -= 1
             LockRotary.release()
-        return  # THAT'S IT
+        return
 
-    def __init__(self, Enc_A, Enc_B):
+    def __init__(self, enc_a, enc_b):
         GPIO.setwarnings(True)
         GPIO.setmode(GPIO.BOARD)
 
-        GPIO.setup(Enc_A, GPIO.IN)
-        GPIO.setup(Enc_B, GPIO.IN)
+        GPIO.setup(enc_a, GPIO.IN)
+        GPIO.setup(enc_b, GPIO.IN)
 
-        GPIO.add_event_detect(Enc_A, GPIO.RISING, callback=self.rotary_interrupt)  # NO bouncetime
-        GPIO.add_event_detect(Enc_B, GPIO.RISING, callback=self.rotary_interrupt)  # NO bouncetime
+        GPIO.add_event_detect(enc_a, GPIO.RISING, callback=self.rotary_interrupt)
+        GPIO.add_event_detect(enc_b, GPIO.RISING, callback=self.rotary_interrupt)
 
         thread = threading.Thread(target=self.start(), args=())
         thread.daemon = False
@@ -52,20 +53,19 @@ class Encoder:
     def start():
         global Rotary_counter, LockRotary
 
-        Position = 0
-        New_Position = 0
+        position = 0
 
         while True:
             sleep(1 / 125)
 
             LockRotary.acquire()
-            New_Position = Rotary_counter
+            new_position = Rotary_counter
             Rotary_counter = 0
             LockRotary.release()
 
-            if (New_Position != 0):
-                Position = Position + New_Position * abs(New_Position)
-                print(New_Position, Position)
+            if new_position != 0:
+                position = position + new_position * abs(new_position)
+                print(new_position, position)
 
 
 Encoder1 = Encoder(14, 15)
