@@ -1,23 +1,14 @@
-#Stolen from https://www.raspberrypi.org/forums/viewtopic.php?f=37&t=140250
 import RPi.GPIO as GPIO
 import threading
 from time import sleep
-import sys
-
-sys.path.insert('/home/pi/dynamixel_hr')
-from dxl.dxlchain import DxlChain
 
 # GPIO Ports
-Enc_A = 15  # Encoder input A: input GPIO 15
-Enc_B = 14  # Encoder input B: input GPIO 14
+Enc_A = 14  # Encoder input A: input GPIO 4
+Enc_B = 15  # Encoder input B: input GPIO 14
+
 Rotary_counter = 0  # Start counting from 0
 Current_A = 1  # Assume that rotary switch is not
 Current_B = 1  # moving while we init software
-Encoder_Min = 0
-Encoder_Max = 720
-
-Chain = DxlChain("/dev/ttyUSB0", rate=3000000)
-print Chain.get_motor_list()  # Discover all motors on the chain and return their IDs
 
 LockRotary = threading.Lock()  # create lock for rotary switch
 
@@ -33,12 +24,6 @@ def init():
     # use interrupts for all inputs
     GPIO.add_event_detect(Enc_A, GPIO.RISING, callback=rotary_interrupt)  # NO bouncetime
     GPIO.add_event_detect(Enc_B, GPIO.RISING, callback=rotary_interrupt)  # NO bouncetime
-
-    # Move a bit
-    Chain.goto(1, 0, speed=200)  # Motor ID 1 is sent to position 500 with high speed
-    Chain.goto(1, 1000)  # Motor ID 1 is sent to position 100 with last speed value
-    Chain.goto(1, 0)
-
     return
 
 
@@ -69,7 +54,7 @@ def rotary_interrupt(A_or_B):
 
 # Main loop. Demonstrate reading, direction and speed of turning left/rignt
 def main():
-    global Rotary_counter, LockRotary, Chain
+    global Rotary_counter, LockRotary
 
     Volume = 0  # Current Volume
     NewCounter = 0  # for faster reading with locks
@@ -77,7 +62,7 @@ def main():
     init()  # Init interrupts, GPIO, ...
 
     while True:  # start test
-        sleep(0.001)  # sleep 100 msec
+        sleep(0.1)  # sleep 100 msec
 
         # because of threading make sure no thread
         # changes value until we get them
@@ -90,16 +75,12 @@ def main():
 
         if (NewCounter != 0):  # Counter has CHANGED
             Volume = Volume + NewCounter * abs(NewCounter)  # Decrease or increase volume
-            print(NewCounter, Volume)  # some test print
-            if Volume < 0:
-                Chain.goto(1, 0)
-            if Volume > 1000:
-                Chain.goto(1, 1000)
+            if Volume < 0:  # limit volume to 0...100
+                Volume = 0
+            if Volume > 100:  # limit volume to 0...100
+                Volume = 100
+            print NewCounter, Volume  # some test print
 
 
 # start main demo function
-try:
-    main()
-except KeyboardInterrupt:
-    print "\n" + "Bye!" + "\n"
-    GPIO.cleanup()
+main()
