@@ -1,20 +1,58 @@
+from __future__ import print_function
 import RPi.GPIO as GPIO
 import threading
-from time import sleep
+import sys
 
-# GPIO Ports
-Encoders = [(7, 8), (11, 12), (15, 16), (17, 18), (21, 22), (23, 24)]
+sys.path.insert(0, '/home/pi/dynamixel_hr')
+from dxl.dxlchain import DxlChain
+
+chain = DxlChain("/dev/ttyUSB0", rate=1000000)
+print(chain.get_motor_list())
+chain.goto(1, 0, 1023, True)
+chain.goto(1, 500, 1023, True)
+chain.goto(1, 0, 1023, True)
+chain.goto(2, 0, 1023, True)
+chain.goto(2, 500, 1023, True)
+chain.goto(2, 0, 1023, True)
+chain.goto(3, 0, 1023, True)
+chain.goto(3, 500, 1023, True)
+chain.goto(3, 0, 1023, True)
+chain.goto(4, 0, 1023, True)
+chain.goto(4, 500, 1023, True)
+chain.goto(4, 0, 1023, True)
+chain.goto(5, 0, 1023, True)
+chain.goto(5, 500, 1023, True)
+chain.goto(5, 0, 1023, True)
 
 
-class Encoder:
+class Encoder(object):
+    """
+    4 Wire Encoder
+    """
     Rotary_counter = 0
     Current_A = 1
     Current_B = 1
+    motor = 0
 
     LockRotary = threading.Lock()
 
     enc_a = 0
     enc_b = 0
+
+    position = 0
+
+    def update_position(self, new_position):
+        """
+        Updates position2
+        :param new_position: 
+        """
+        self.position += new_position * abs(new_position)
+        if self.position > 1000:
+            self.position = 1000
+        elif self.position < 0:
+            self.position = 0
+        else:
+            return
 
     def rotary_interrupt(self, a_or_b):
 
@@ -42,25 +80,10 @@ class Encoder:
             self.LockRotary.release()
         return
 
-    def start(self):
-
-        position = 0
-
-        while True:
-            sleep(1 / 125)
-
-            self.LockRotary.acquire()
-            new_position = self.Rotary_counter
-            self.Rotary_counter = 0
-            self.LockRotary.release()
-
-            if new_position != 0:
-                position = position + new_position * abs(new_position)
-                print(new_position, position)
-
-    def __init__(self, enc_a, enc_b):
+    def __init__(self, enc_a, enc_b, motor):
         self.enc_a = enc_a
         self.enc_b = enc_b
+        self.motor = motor
 
         GPIO.setwarnings(True)
         GPIO.setmode(GPIO.BOARD)
@@ -71,9 +94,35 @@ class Encoder:
         GPIO.add_event_detect(self.enc_a, GPIO.RISING, callback=self.rotary_interrupt)
         GPIO.add_event_detect(self.enc_b, GPIO.RISING, callback=self.rotary_interrupt)
 
-        thread = threading.Thread(target=self.start(), args=())
-        thread.daemon = False
-        thread.start()
+
+def update(encoder):
+    """
+    Update position.
+    :param encoder: 
+    """
+    encoder.LockRotary.acquire()
+    new_position = encoder.Rotary_counter
+    encoder.Rotary_counter = 0
+    encoder.LockRotary.release()
+    if new_position != 0:
+        encoder.update_position(new_position)
+        chain.goto(encoder.motor, encoder.position, 1000, False)
 
 
-Encoder1 = Encoder(8, 10)
+Encoder1 = Encoder(8, 10, 1)
+Encoder2 = Encoder(11, 12, 2)
+Encoder3 = Encoder(15, 16, 3)
+Encoder4 = Encoder(21, 22, 4)
+Encoder5 = Encoder(23, 24, 5)
+
+while True:
+    try:
+        update(Encoder1)
+        update(Encoder2)
+        update(Encoder3)
+        update(Encoder4)
+        update(Encoder5)
+
+    except KeyboardInterrupt:
+        GPIO.cleanup()
+        print("Bye! \n")
