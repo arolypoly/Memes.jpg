@@ -29,6 +29,20 @@ class Pair(object):
     initialPosition = 0
     direction = 0
 
+    def sanity_check(self, new_position):
+        """
+        Makes sure new position is in bounds
+        :param new_position: Raw displacement value from encoder
+        :return: Burns up the CPU
+        """
+        self.position += new_position * abs(new_position) * 13
+        if self.position > 1000:
+            self.position = 1000
+        elif self.position < 0:
+            self.position = 0
+        else:
+            return
+
     def rotary_interrupt(self, a_or_b):
 
         """
@@ -87,32 +101,27 @@ class Pair(object):
         chain.goto(self.motor, self.initialPosition + (250 * self.direction), 1023, True)
         chain.goto(self.motor, self.initialPosition, 1023, True)
 
-    def update(self):
-        """
-        Update an Encoder's position value.
-        """
-        self.lockRotary.acquire()
-        new_position = self.counter
-        self.counter = 0
-        self.lockRotary.release()
 
-        if new_position != 0:
-            self.position += new_position * abs(new_position) * 10
-            if self.position > 1000:
-                self.position = 1000
-            elif self.position < 0:
-                self.position = 0
-            else:
-                return
+def update(pair):
+    """
+    Update an Encoder's position value.
+    """
+    pair.lockRotary.acquire()
+    new_position = pair.counter
+    pair.counter = 0
+    pair.lockRotary.release()
+    if new_position != 0:
+        pair.sanity_check(new_position)
+        #print(pair.encoderA, pair.encoderB, pair.motor, pair.position)
+        chain.goto(pair.motor, pair.position, 1000, False)
 
-            chain.goto(self.motor, self.position, 1000, False)
 
-Pair1 = Pair(8, 10, 1, 0, 1)
-Pair2 = Pair(11, 12, 2, 0, 1)
-Pair3 = Pair(15, 16, 3, 0, 1)
-Pair4 = Pair(21, 22, 4, 0, 1)
-Pair5 = Pair(23, 24, 5, 0, 1)
-Pair6 = Pair(27, 28, 6, 0, 1)
+Pair1 = Pair(8, 10, 5, 0, 1)
+Pair2 = Pair(11, 12, 6, 0, 1)
+Pair3 = Pair(15, 16, 2, 0, 1)
+Pair4 = Pair(21, 22, 3, 0, 1)
+Pair5 = Pair(23, 24, 1, 0, 1)
+Pair6 = Pair(31, 32, 4, 0, 1)
 array = [Pair1, Pair2, Pair3, Pair4, Pair5, Pair6]
 
 for Pair in array:
@@ -121,7 +130,7 @@ for Pair in array:
 while True:
     try:
         for Pair in array:
-            Pair.update()
+            update(Pair)
 
     except KeyboardInterrupt:
         GPIO.cleanup()
