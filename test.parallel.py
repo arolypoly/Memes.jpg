@@ -135,3 +135,4 @@ while True:
     except KeyboardInterrupt:
         GPIO.cleanup()
         print("Bye! \n")
+        sys.exit(0)
